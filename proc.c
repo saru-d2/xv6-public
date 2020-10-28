@@ -92,9 +92,14 @@ found:
   p->pid = nextpid++;
 
   //------------my code
+  p->ioTime = 0;
   p->startTime = ticks;
-  p->endTime = ticks;
+  p->endTime = 0;
   p->runTime = 0;
+  for (int i = 0; i < 5; i++)
+    p->tickQ[i] = 0;
+  p->cur_q = 0;
+  p->n_run = 0;
   //----------
 
   release(&ptable.lock);
@@ -245,7 +250,7 @@ void exit(void)
     panic("init exiting");
 
   //-------my code
-  curproc->endTime = ticks; 
+  curproc->endTime = ticks;
   //-------
 
   // Close all open files.
@@ -355,7 +360,7 @@ int waitx(int *wtime, int *rtime)
 
         //my mod to wait()
         *rtime = p->runTime;
-        *wtime = p->endTime - p->startTime - p->runTime;
+        *wtime = p->endTime - p->runTime - p->startTime - p->ioTime;
         //
 
         pid = p->pid;
@@ -368,7 +373,7 @@ int waitx(int *wtime, int *rtime)
         p->killed = 0;
         p->state = UNUSED;
         release(&ptable.lock);
-        return 1;
+        return pid;
       }
     }
 
@@ -605,3 +610,42 @@ void procdump(void)
     cprintf("\n");
   }
 }
+
+//------------my code
+
+int psx()
+{
+  struct proc *p;
+
+  acquire(&ptable.lock);
+
+  cprintf( "PID\tPriority\tState\t\tr_time\tw_time\tn_run\tcur_q\tq0\tq1\tq2\tq3\tq4\n");
+
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  { if (p->state == UNUSED)continue;
+    cprintf( "%d\t%d\t\t", p->pid, p->priority);
+    switch (p->state)
+    {
+    case SLEEPING:
+      cprintf( "SLEEPING\t");
+      break;
+    case RUNNING:
+      cprintf( "RUNNING \t");
+      break;
+    case RUNNABLE:
+      cprintf("RUNNABLE\t");
+      break;
+    default:
+      break;
+    }
+    cprintf("%d\t%d\t%d\t%d\t", p->runTime, ticks - p->startTime - p->runTime, p->n_run, p->cur_q );
+    for (int i =0; i<5; i++)cprintf( "%d\t", p->tickQ[i]);
+    cprintf("\n");
+  }
+
+  release(&ptable.lock);
+  return 1;
+  exit();
+}
+
+//------------

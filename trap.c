@@ -53,10 +53,18 @@ void trap(struct trapframe *tf)
       ticks++;
       //-------------my code
       struct proc *curProc = myproc();
-      if (curProc)
+      if (curProc){
+      if (curProc->state == RUNNING)
       {
         curProc->runTime++;
       }
+      if (curProc->state == SLEEPING)
+      {
+        curProc->ioTime++;
+      }
+      
+      }
+
       //-------------my code
       wakeup(&ticks);
       release(&tickslock);

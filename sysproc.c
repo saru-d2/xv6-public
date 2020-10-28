@@ -28,6 +28,10 @@ int sys_waitx(void)
   return waitx(wtime, rtime);
 }
 
+int sys_psx(void){
+  return psx();
+}
+
 int sys_wait(void)
 {
   return wait();

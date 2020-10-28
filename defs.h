@@ -124,12 +124,11 @@ void yield(void);
 //----- my code
 
 int waitx(int *, int *);
-
+int psx(void);
 //-----
 
-    // swtch.S
-    void
-    swtch(struct context **, struct context *);
+// swtch.S
+void swtch(struct context **, struct context *);
 
 // spinlock.c
 void acquire(struct spinlock *);

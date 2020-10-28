@@ -52,9 +52,9 @@ struct proc {
 
   //-----my code 
 
-  int ctime, etime, rtime;
-  int runTime, startTime, endTime;
-
+  int runTime, startTime, endTime, ioTime;  //also for waitx
+  int priority, cur_q, n_run;       //for ps
+  int tickQ[5];
   //-----
 };
 

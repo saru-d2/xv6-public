@@ -32,3 +32,4 @@ SYSCALL(uptime)
 
 
 SYSCALL(waitx) 
+SYSCALL(psx)
