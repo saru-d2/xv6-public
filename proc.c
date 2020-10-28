@@ -368,7 +368,7 @@ int waitx(int *wtime, int *rtime)
         p->killed = 0;
         p->state = UNUSED;
         release(&ptable.lock);
-        return pid;
+        return 1;
       }
     }
 
