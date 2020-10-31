@@ -125,6 +125,8 @@ void yield(void);
 
 int waitx(int *, int *);
 int psx(void);
+int set_priority(int, int);
+int updateProcTime(void);
 //-----
 
 // swtch.S

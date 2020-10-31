@@ -26,6 +26,8 @@ int uptime(void);
 //----my code
 int waitx(int* wtime, int* rtime);
 int psx(void);
+int set_priority(int, int);
+int updateProcTime(void);
 //
 
 // ulib.c

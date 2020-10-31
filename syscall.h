@@ -22,3 +22,5 @@
 #define SYS_close 21
 #define SYS_waitx 22
 #define SYS_psx 23
+#define SYS_set_priority 24
+#define SYS_updateProcTime 25

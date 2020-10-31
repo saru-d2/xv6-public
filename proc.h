@@ -55,6 +55,9 @@ struct proc {
   int runTime, startTime, endTime, ioTime;  //also for waitx
   int priority, cur_q, n_run;       //for ps
   int tickQ[5];
+  int mlfqQueueEnterTime;
+  int mlfqTimeCur;
+  
   //-----
 };
 

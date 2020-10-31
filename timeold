@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
     if (pid > 0){
         int waitTime = 0, runTime = 0, wxRet = 0;
         wxRet =waitx(&waitTime, &runTime);
-        printf(1, "time: process %d, had wait time %d, runtime %d\n", wxRet, waitTime, runTime );
+        printf(1, "time: status: %d process %d, had wait time %d, runtine %d\n", wxRet, pid, waitTime, runTime );
 
         exit();
     }

@@ -102,6 +102,8 @@ extern int sys_uptime(void);
 //----my code
 extern int sys_waitx(void);
 extern int sys_psx(void);
+extern int sys_set_priority(void);
+extern int sys_updateProcTime(void);
 
 //----
 
@@ -130,9 +132,11 @@ static int (*syscalls[])(void) = {
     //---my code
     [SYS_waitx] sys_waitx,
     [SYS_psx] sys_psx,
-//
-}
-;
+    [SYS_set_priority] sys_set_priority,
+    [SYS_updateProcTime] sys_updateProcTime,
+
+    //
+};
 
 void syscall(void)
 {

@@ -6,17 +6,7 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
-// #define MLFQ
 
-//-----my code
-int mlfqDelQueue(struct proc *p, int qNo);
-int mlfqAppendQueue(struct proc *p, int qNo);
-
-struct proc *mlfqQueue[5][NPROC + 5];
-int mlfqTimeLimit[] = {1, 2, 4, 8, 16};
-int mlfqAgeLimit = 25;
-int mlfqQueueSize[] = {0, 0, 0, 0, 0};
-//-----
 struct
 {
   struct spinlock lock;
@@ -85,7 +75,6 @@ myproc(void)
 static struct proc *
 allocproc(void)
 {
-  // cprintf("allocproccing\n");
   struct proc *p;
   char *sp;
 
@@ -110,13 +99,7 @@ found:
   for (int i = 0; i < 5; i++)
     p->tickQ[i] = 0;
   p->cur_q = 0;
-  p->priority = 60;
   p->n_run = 0;
-  p->mlfqTimeCur = 0;
-  p->mlfqQueueEnterTime = 0;
-#ifdef MLFQ
-  mlfqAppendQueue(p, 0);
-#endif
   //----------
 
   release(&ptable.lock);
@@ -179,9 +162,6 @@ void userinit(void)
   acquire(&ptable.lock);
 
   p->state = RUNNABLE;
-#ifdef MLFQ
-  mlfqAppendQueue(p, 0);
-#endif
 
   release(&ptable.lock);
 }
@@ -252,10 +232,6 @@ int fork(void)
 
   np->state = RUNNABLE;
 
-#ifdef MLFQ
-  mlfqAppendQueue(np, 0);
-#endif
-
   release(&ptable.lock);
 
   return pid;
@@ -267,9 +243,6 @@ int fork(void)
 void exit(void)
 {
   struct proc *curproc = myproc();
-  ///
-  // cprintf("@%d@\n", curproc->n_run);
-  ///
   struct proc *p;
   int fd;
 
@@ -427,12 +400,10 @@ int waitx(int *wtime, int *rtime)
 //      via swtch back to the scheduler.
 void scheduler(void)
 {
+  struct proc *p;
   struct cpu *c = mycpu();
   c->proc = 0;
-#ifdef RR
-  struct proc *p;
 
-  cprintf("RR\n");
   for (;;)
   {
     // Enable interrupts on this processor.
@@ -448,11 +419,10 @@ void scheduler(void)
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
-
       c->proc = p;
       switchuvm(p);
       p->state = RUNNING;
-      p->n_run++;
+
       swtch(&(c->scheduler), p->context);
       switchkvm();
 
@@ -462,157 +432,6 @@ void scheduler(void)
     }
     release(&ptable.lock);
   }
-#endif
-#ifdef FCFS
-  struct proc *p;
-
-  cprintf("FCFS\n");
-  struct proc *curProc = 0;
-  for (;;)
-  {
-    // Enable interrupts on this processor.
-    sti();
-
-    // Loop over process table looking for process to run.
-    acquire(&ptable.lock);
-    for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    {
-      if (p->state != RUNNABLE)
-        continue;
-      if (curProc == 0)
-      {
-        curProc = p;
-      }
-      else if (curProc->startTime > p->startTime)
-      {
-        curProc = p;
-      }
-    }
-    if (curProc != 0)
-    {
-      c->proc = curProc;
-      switchuvm(curProc);
-      curProc->state = RUNNING;
-      //--mycode
-      curProc->n_run++;
-      //--
-      swtch(&(c->scheduler), curProc->context);
-      switchkvm();
-
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      c->proc = 0;
-    }
-    release(&ptable.lock);
-    curProc = 0;
-  }
-#endif
-#ifdef PBS
-  struct proc *p;
-
-  cprintf("PBS\n");
-  struct proc *curP = 0, *iterPr;
-  for (;;)
-  {
-    // Enable interrupts on this processor.
-    sti();
-
-    // Loop over process table looking for process to run.
-    acquire(&ptable.lock);
-    for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    {
-      if (p->state != RUNNABLE)
-        continue;
-      curP = p;
-      for (iterPr = ptable.proc; iterPr < &ptable.proc[NPROC]; iterPr++)
-      {
-        if (iterPr->state != RUNNABLE)
-          continue;
-        if (iterPr->priority < curP->priority)
-          curP = iterPr;
-      }
-      if (curP == 0)
-        ;
-      else
-      {
-        c->proc = curP;
-        switchuvm(curP);
-        curP->state = RUNNING;
-        curP->n_run++;
-        swtch(&(c->scheduler), curP->context);
-        switchkvm();
-
-        // Process is done running for now.
-        // It should have changed its p->state before coming back.
-        c->proc = 0;
-        curP = 0;
-      }
-    }
-    release(&ptable.lock);
-  }
-#endif
-#ifdef MLFQ
-  struct proc *curP = 0, *temp;
-  cprintf("MLFQ\n");
-  for (;;)
-  {
-    // Enable interrupts on this processor.
-    sti();
-
-    // Loop over process table looking for process to run.
-    acquire(&ptable.lock);
-    for (int i = 1; i < 5; i++)
-    {
-      for (int j = 0; j < mlfqQueueSize[i]; j++)
-      {
-        temp = mlfqQueue[i][j];
-        int procAge = ticks - temp->mlfqQueueEnterTime;
-        if (procAge > mlfqAgeLimit)
-        {
-          //move process to previous tier
-          //like 1-> 0
-          mlfqDelQueue(temp, i);
-          mlfqAppendQueue(temp, i - 1);
-        }
-      }
-    }
-    curP = 0;
-    // cprintf("oogabooga %d\n", mlfqQueueSize[0]);
-    for (int i = 0; i < 5; i++)
-    {
-      if (mlfqQueueSize[i] > 0)
-      {
-        curP = mlfqQueue[i][0];
-        //remove proc
-        mlfqDelQueue(curP, i);
-        break;
-      }
-    }
-    if (curP != 0 && curP->state == RUNNABLE)
-    {
-      c->proc = curP;
-      switchuvm(curP);
-      curP->state = RUNNING;
-      curP->n_run++;
-      swtch(&(c->scheduler), curP->context);
-      switchkvm();
-      if (curP != 0)
-      {
-        int next_q = curP->cur_q;
-        if (curP->mlfqTimeCur > mlfqTimeLimit[curP->cur_q])
-        {
-          if (curP->cur_q < 4)
-            next_q = curP->cur_q + 1;
-        }
-        curP->mlfqTimeCur = 0;
-        mlfqAppendQueue(curP, next_q);
-      }
-      c->proc = 0;
-    }
-    release(&ptable.lock);
-    curP = 0;
-  }
-#endif
 }
 
 // Enter scheduler.  Must hold only ptable.lock
@@ -720,10 +539,7 @@ wakeup1(void *chan)
 
   for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if (p->state == SLEEPING && p->chan == chan)
-    {
       p->state = RUNNABLE;
-      mlfqAppendQueue(p, p->cur_q);
-    }
 }
 
 // Wake up all processes sleeping on chan.
@@ -749,13 +565,7 @@ int kill(int pid)
       p->killed = 1;
       // Wake process from sleep if necessary.
       if (p->state == SLEEPING)
-      {
         p->state = RUNNABLE;
-
-#ifdef MLFQ
-        mlfqAppendQueue(p, 0);
-#endif
-      }
       release(&ptable.lock);
       return 0;
     }
@@ -801,7 +611,7 @@ void procdump(void)
   }
 }
 
-//------------
+//------------my code
 
 int psx()
 {
@@ -809,20 +619,18 @@ int psx()
 
   acquire(&ptable.lock);
 
-  cprintf("PID\tPriority\tState\t\tr_time\tw_time\tn_run\tcur_q\tq0\tq1\tq2\tq3\tq4\n");
+  cprintf( "PID\tPriority\tState\t\tr_time\tw_time\tn_run\tcur_q\tq0\tq1\tq2\tq3\tq4\n");
 
   for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-  {
-    // if (p->state == UNUSED)
-    //   continue;
-    cprintf("%d\t%d\t\t", p->pid, p->priority);
+  { if (p->state == UNUSED)continue;
+    cprintf( "%d\t%d\t\t", p->pid, p->priority);
     switch (p->state)
     {
     case SLEEPING:
-      cprintf("SLEEPING\t");
+      cprintf( "SLEEPING\t");
       break;
     case RUNNING:
-      cprintf("RUNNING \t");
+      cprintf( "RUNNING \t");
       break;
     case RUNNABLE:
       cprintf("RUNNABLE\t");
@@ -830,94 +638,14 @@ int psx()
     default:
       break;
     }
-    cprintf("%d\t%d\t%d\t%d\t", p->runTime, ticks - p->startTime - p->runTime, p->n_run, p->cur_q);
-    for (int i = 0; i < 5; i++)
-      cprintf("%d\t", p->tickQ[i]);
+    cprintf("%d\t%d\t%d\t%d\t", p->runTime, ticks - p->startTime - p->runTime, p->n_run, p->cur_q );
+    for (int i =0; i<5; i++)cprintf( "%d\t", p->tickQ[i]);
     cprintf("\n");
   }
 
   release(&ptable.lock);
   return 1;
   exit();
-}
-
-int set_priority(int nPri, int pid)
-{
-  cprintf("in set_priority %d %d\n", nPri, pid);
-
-  if (nPri > 100 || nPri < 0)
-    return -1;
-  acquire(&ptable.lock);
-  struct proc *p;
-  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-  {
-    if (p->pid == pid)
-    {
-      int temp = p->priority;
-      p->priority = nPri;
-      release(&ptable.lock);
-      cprintf("Priority of pid %d changed from %d to %d\n", pid, temp, nPri);
-      return 1;
-    }
-  }
-  release(&ptable.lock);
-  return -1;
-}
-
-int updateProcTime()
-{
-  struct proc *p;
-  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-  {
-    if (p->state == RUNNING)
-    {
-      p->runTime++;
-      p->tickQ[p->cur_q]++;
-      p->mlfqTimeCur++;
-    }
-    else if (p->state == SLEEPING)
-      p->ioTime++;
-  }
-  return 1;
-}
-
-int mlfqDelQueue(struct proc *p, int qNo)
-{
-  // cprintf("removing from q %d\n", qNo);
-  int pid = p->pid;
-  int ind = -1;
-  for (int i = 0; i < mlfqQueueSize[qNo]; i++)
-  {
-    if (mlfqQueue[qNo][i]->pid == pid)
-    {
-      ind = i;
-      break;
-    }
-  }
-  if (ind == -1)
-    return -1;
-  for (int i = ind; i < mlfqQueueSize[qNo] - 1; i++)
-  {
-    mlfqQueue[qNo][i] = mlfqQueue[qNo][i + 1];
-  }
-  mlfqQueueSize[qNo]--;
-  return 1;
-}
-
-int mlfqAppendQueue(struct proc *p, int qNo)
-{
-  // cprintf("appending to q %d\n", qNo);
-  int pid = p->pid;
-  for (int i = 0; i < mlfqQueueSize[qNo]; i++)
-  {
-    if (mlfqQueue[qNo][i]->pid == pid)
-      return -1;
-  }
-  mlfqQueue[qNo][mlfqQueueSize[qNo]] = p;
-  p->mlfqQueueEnterTime = ticks;
-  p->cur_q = qNo;
-  mlfqQueueSize[qNo]++;
-  return 1;
 }
 
 //------------

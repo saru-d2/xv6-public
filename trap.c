@@ -52,21 +52,22 @@ void trap(struct trapframe *tf)
       acquire(&tickslock);
       ticks++;
       //-------------my code
-      struct proc *curProc = myproc();
-      if (curProc){
-      if (curProc->state == RUNNING)
-      {
-        curProc->runTime++;
-      }
-      if (curProc->state == SLEEPING)
-      {
-        curProc->ioTime++;
-      }
-      
-      }
+      // struct proc *curProc = myproc();
+      // if (curProc)
+      // {
+      //   if (curProc->state == RUNNING)
+      //   {
+      //     curProc->runTime++;
+      //   }
+      //   if (curProc->state == SLEEPING)
+      //   {
+      //     curProc->ioTime++;
+      //   }
+      // }
+      updateProcTime();
 
-      //-------------my code
-      wakeup(&ticks);
+        //-------------my code
+        wakeup(&ticks);
       release(&tickslock);
     }
     lapiceoi();
@@ -116,12 +117,13 @@ void trap(struct trapframe *tf)
   if (myproc() && myproc()->killed && (tf->cs & 3) == DPL_USER)
     exit();
 
-  // Force process to give up CPU on clock tick.
-  // If interrupts were on while locks held, would need to check nlock.
+// Force process to give up CPU on clock tick.
+// If interrupts were on while locks held, would need to check nlock.
+#ifndef FCFS
   if (myproc() && myproc()->state == RUNNING &&
       tf->trapno == T_IRQ0 + IRQ_TIMER)
     yield();
-
+#endif
   // Check if the process has been killed since we yielded
   if (myproc() && myproc()->killed && (tf->cs & 3) == DPL_USER)
     exit();

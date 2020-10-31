@@ -28,8 +28,23 @@ int sys_waitx(void)
   return waitx(wtime, rtime);
 }
 
-int sys_psx(void){
+int sys_psx(void)
+{
   return psx();
+}
+
+int sys_set_priority(void)
+{
+  int nPri, pid;
+  if (argint(0, &nPri) < 0)
+    return -1;
+  if (argint(0, &pid) < 0)
+    return -1;
+  return set_priority(nPri, pid);
+}
+
+int sys_updateProcTime(void){
+  return updateProcTime();
 }
 
 int sys_wait(void)

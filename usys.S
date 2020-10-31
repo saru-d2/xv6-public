@@ -33,3 +33,5 @@ SYSCALL(uptime)
 
 SYSCALL(waitx) 
 SYSCALL(psx)
+SYSCALL(set_priority)
+SYSCALL(updateProcTime)
