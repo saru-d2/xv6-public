@@ -27,15 +27,15 @@ run
 ```
 It displays info of all active processes. It also displays information related to mlfq like the current q and the time spent in each of the 5 queues.
 
-## Schedulers
-### round robin
-    default scheduler, no changes were made.
-### FCFS
-    We iterate through the proc table, looking for the task with least creation time.
-    As its not pre-emptive we do not yield in trap.c
+# Schedulers
+## round robin
+default scheduler, no changes were made.
+## FCFS
+We iterate through the proc table, looking for the task with least creation time.
+As its not pre-emptive we do not yield in trap.c
     
-    code snippet:
-    ```c
+ code snippet:
+ ```c
     for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     {
       if (p->state != RUNNABLE)
@@ -49,13 +49,14 @@ It displays info of all active processes. It also displays information related t
         curProc = p;
       }
     }
-    ```
+```
+
 ### PBS
     Iterate through the proc-table looking for the process with highest priority.
     And execute that process
     
     code snippet:
-    ```
+  ```c
     for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     {
       if (p->state != RUNNABLE)
@@ -95,3 +96,4 @@ It displays info of all active processes. It also displays information related t
     ```
     
 ### MLFQ
+5 queues are declared (from 0 - 4)
