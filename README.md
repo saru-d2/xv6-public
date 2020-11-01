@@ -52,11 +52,11 @@ As its not pre-emptive we do not yield in trap.c
 ```
 
 ### PBS
-    Iterate through the proc-table looking for the process with highest priority.
-    And execute that process
+Iterate through the proc-table looking for the process with highest priority.
+And execute that process
     
-    code snippet:
-  ```c
+code snippet:
+```c
     for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     {
       if (p->state != RUNNABLE)
@@ -86,14 +86,14 @@ As its not pre-emptive we do not yield in trap.c
         curP = 0;
       }
     }
-    ```
+```
     
-    Implemented syscall set_priority that sets the priority of the process..
-    Also made user command setPriority
-    usage:
-    ```bash
+Implemented syscall set_priority that sets the priority of the process..
+Also made user command setPriority
+usage:
+```bash
     setPriority $NEWPRIORITY $PID
-    ```
+```
     
 ### MLFQ
 5 queues are declared (from 0 - 4)
