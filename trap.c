@@ -64,10 +64,11 @@ void trap(struct trapframe *tf)
       //     curProc->ioTime++;
       //   }
       // }
+      
       updateProcTime();
 
-        //-------------my code
-        wakeup(&ticks);
+      //-------------my code
+      wakeup(&ticks);
       release(&tickslock);
     }
     lapiceoi();
@@ -117,13 +118,27 @@ void trap(struct trapframe *tf)
   if (myproc() && myproc()->killed && (tf->cs & 3) == DPL_USER)
     exit();
 
-// Force process to give up CPU on clock tick.
-// If interrupts were on while locks held, would need to check nlock.
-#ifndef FCFS
-  if (myproc() && myproc()->state == RUNNING &&
-      tf->trapno == T_IRQ0 + IRQ_TIMER)
-    yield();
+  // Force process to give up CPU on clock tick.
+  // If interrupts were on while locks held, would need to check nlock.
+  if (myproc() && myproc()->state == RUNNING && tf->trapno == T_IRQ0 + IRQ_TIMER)
+  {
+
+#if defined RR || defined PBS 
+    if (myproc() && myproc()->state == RUNNING &&
+        tf->trapno == T_IRQ0 + IRQ_TIMER)
+      yield();
 #endif
+#ifdef MLFQ
+  int ageLim[] = {1, 2, 4, 8, 16};
+    if (myproc()->mlfqTimeCur > ageLim[myproc()->cur_q])
+    {
+      // myproc()->demote = 1;
+      demoteProc(myproc());
+      yield();
+    }
+
+#endif
+  }
   // Check if the process has been killed since we yielded
   if (myproc() && myproc()->killed && (tf->cs & 3) == DPL_USER)
     exit();

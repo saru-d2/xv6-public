@@ -38,7 +38,7 @@ int sys_set_priority(void)
   int nPri, pid;
   if (argint(0, &nPri) < 0)
     return -1;
-  if (argint(0, &pid) < 0)
+  if (argint(1, &pid) < 0)
     return -1;
   return set_priority(nPri, pid);
 }

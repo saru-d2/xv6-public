@@ -1,6 +1,10 @@
 #!/bin/bash
 make clean
-if [ $# -eq 2 ]
+if [ $# -eq 3 ]
+    then
+       make SCHEDULER=$1 CPUS=$2 GRAPH=$3
+       make qemu-nox SCHEDULER=$1 CPUS=$2 GRAPH=$3
+elif [ $# -eq 2 ]
     then
        make SCHEDULER=$1 CPUS=$2
        make qemu-nox SCHEDULER=$1 CPUS=$2

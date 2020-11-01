@@ -14,7 +14,7 @@ int mlfqAppendQueue(struct proc *p, int qNo);
 
 struct proc *mlfqQueue[5][NPROC + 5];
 int mlfqTimeLimit[] = {1, 2, 4, 8, 16};
-int mlfqAgeLimit = 25;
+int mlfqAgeLimit = 5;
 int mlfqQueueSize[] = {0, 0, 0, 0, 0};
 //-----
 struct
@@ -114,8 +114,13 @@ found:
   p->n_run = 0;
   p->mlfqTimeCur = 0;
   p->mlfqQueueEnterTime = 0;
+  p->demote = 0;
 #ifdef MLFQ
   mlfqAppendQueue(p, 0);
+  #ifdef GRAPH
+          cprintf("BORN");
+          cprintf("\nGRAPH ADD: %d %d %d\n", p->pid, 0, ticks);
+#endif
 #endif
   //----------
 
@@ -347,6 +352,9 @@ int wait(void)
         p->name[0] = 0;
         p->killed = 0;
         p->state = UNUSED;
+#ifdef MLFQ
+        mlfqDelQueue(p, p->cur_q);
+#endif
         release(&ptable.lock);
         return pid;
       }
@@ -387,7 +395,7 @@ int waitx(int *wtime, int *rtime)
 
         //my mod to wait()
         *rtime = p->runTime;
-        *wtime = p->endTime - p->runTime - p->startTime - p->ioTime;
+        *wtime = p->endTime - p->runTime - p->startTime;
         //
 
         pid = p->pid;
@@ -399,6 +407,9 @@ int waitx(int *wtime, int *rtime)
         p->name[0] = 0;
         p->killed = 0;
         p->state = UNUSED;
+#ifdef MLFQ
+        mlfqDelQueue(p, p->cur_q);
+#endif
         release(&ptable.lock);
         return pid;
       }
@@ -573,6 +584,11 @@ void scheduler(void)
           //like 1-> 0
           mlfqDelQueue(temp, i);
           mlfqAppendQueue(temp, i - 1);
+          temp->mlfqTimeCur = 0;
+#ifdef GRAPH
+cprintf("PROMOTED\n");
+          cprintf("\nGRAPH ADD: %d %d %d\n", temp->pid, i - 1, ticks);
+#endif
         }
       }
     }
@@ -599,12 +615,23 @@ void scheduler(void)
       if (curP != 0)
       {
         int next_q = curP->cur_q;
-        if (curP->mlfqTimeCur > mlfqTimeLimit[curP->cur_q])
+        // cprintf("!%d %d!\n", curP->mlfqTimeCur, mlfqTimeLimit[curP->cur_q]);
+        if (curP->demote == 1)
         {
           if (curP->cur_q < 4)
+          {
+            #ifdef GRAPH
+            cprintf("DEMOTED %d\n", curP->pid);
+            #endif
             next_q = curP->cur_q + 1;
+          }
+          curP->demote = 0;
         }
-        curP->mlfqTimeCur = 0;
+#ifdef GRAPH
+        if (next_q != curP->cur_q)
+          cprintf("\nGRAPH ADD: %d %d %d\n", curP->pid, next_q, ticks);
+#endif
+        // curP->mlfqTimeCur = 0;
         mlfqAppendQueue(curP, next_q);
       }
       c->proc = 0;
@@ -613,6 +640,8 @@ void scheduler(void)
     curP = 0;
   }
 #endif
+
+
 }
 
 // Enter scheduler.  Must hold only ptable.lock
@@ -723,6 +752,7 @@ wakeup1(void *chan)
     {
       p->state = RUNNABLE;
       mlfqAppendQueue(p, p->cur_q);
+      p->mlfqTimeCur = 0;
     }
 }
 
@@ -813,8 +843,8 @@ int psx()
 
   for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
   {
-    // if (p->state == UNUSED)
-    //   continue;
+    if (p->state == UNUSED)
+      continue;
     cprintf("%d\t%d\t\t", p->pid, p->priority);
     switch (p->state)
     {
@@ -830,7 +860,7 @@ int psx()
     default:
       break;
     }
-    cprintf("%d\t%d\t%d\t%d\t", p->runTime, ticks - p->startTime - p->runTime, p->n_run, p->cur_q);
+    cprintf("%d\t%d\t%d\t%d\t", p->runTime,ticks - p->startTime - p->runTime, p->n_run, p->cur_q);
     for (int i = 0; i < 5; i++)
       cprintf("%d\t", p->tickQ[i]);
     cprintf("\n");
@@ -867,6 +897,8 @@ int set_priority(int nPri, int pid)
 int updateProcTime()
 {
   struct proc *p;
+	acquire(&ptable.lock);
+
   for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
   {
     if (p->state == RUNNING)
@@ -878,6 +910,7 @@ int updateProcTime()
     else if (p->state == SLEEPING)
       p->ioTime++;
   }
+  release(&ptable.lock);
   return 1;
 }
 
@@ -901,6 +934,7 @@ int mlfqDelQueue(struct proc *p, int qNo)
     mlfqQueue[qNo][i] = mlfqQueue[qNo][i + 1];
   }
   mlfqQueueSize[qNo]--;
+
   return 1;
 }
 
@@ -917,7 +951,14 @@ int mlfqAppendQueue(struct proc *p, int qNo)
   p->mlfqQueueEnterTime = ticks;
   p->cur_q = qNo;
   mlfqQueueSize[qNo]++;
+
   return 1;
 }
 
+int demoteProc(struct proc* p){
+  acquire(&ptable.lock);
+  p->demote = 1;
+  release(&ptable.lock);
+  return 1;
+}
 //------------

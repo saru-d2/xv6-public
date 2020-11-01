@@ -57,6 +57,7 @@ struct proc {
   int tickQ[5];
   int mlfqQueueEnterTime;
   int mlfqTimeCur;
+  int demote;
   
   //-----
 };
