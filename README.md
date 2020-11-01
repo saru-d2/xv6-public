@@ -97,3 +97,65 @@ usage:
     
 ### MLFQ
 5 queues are declared (from 0 - 4)
+We add a process to q0 everytime a process becomes runnable
+Ageing is realized through iterating through every queue thats not q0, and checking if time spent in that queue is greater than the agelimit for that queue (2^i)
+
+```c
+for (int i = 1; i < 5; i++)
+    {
+      for (int j = 0; j < mlfqQueueSize[i]; j++)
+      {
+        temp = mlfqQueue[i][j];
+        int procAge = ticks - temp->mlfqQueueEnterTime;
+        if (procAge > mlfqAgeLimit)
+        {
+          //move process to previous tier
+          //like 1-> 0
+          mlfqDelQueue(temp, i);
+          mlfqAppendQueue(temp, i - 1);
+          temp->mlfqTimeCur = 0;
+#ifdef GRAPH
+cprintf("PROMOTED\n");
+          cprintf("\nGRAPH ADD: %d %d %d\n", temp->pid, i - 1, ticks);
+#endif
+        }
+      }
+    }
+```
+
+then we go over the 'head' of each queue and select the first one we get, and if its runnable we remove it from the queue
+```c
+for (int i = 0; i < 5; i++)
+    {
+      if (mlfqQueueSize[i] > 0)
+      {
+        curP = mlfqQueue[i][0];
+        //remove proc
+        mlfqDelQueue(curP, i);
+        break;
+      }
+    }
+```
+then we execute it!.
+
+
+In trap.c, right before yielding, we check if the process has exhausted the time in that queue. if it has we move it to the next queue.
+
+```c
+#ifdef MLFQ
+  int ageLim[] = {1, 2, 4, 8, 16};
+    if (myproc()->mlfqTimeCur > ageLim[myproc()->cur_q])
+    {
+      // myproc()->demote = 1;
+      demoteProc(myproc());
+      yield();
+    }
+#endif
+```
+
+##BONUS
+so whenever a queue is changes for a process i output a line as follows
+```c
+          cprintf("\nGRAPH ADD: %d %d %d\n", p->pid, p->cur_q, ticks);
+```
+and i redirect the output to a file, from where i run a python script to make the graph. Library used: matlabplot.pyplot
