@@ -2,7 +2,7 @@
 #include "types.h"
 #include "user.h"
 
-int number_of_processes = 10;
+int number_of_processes = 20;
 
 int main(int argc, char *argv[])
 {
@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
       {
         if (k <= j)
         {
-          sleep(200); //io time
+//          sleep(200); //io time
         }
         else
         {
