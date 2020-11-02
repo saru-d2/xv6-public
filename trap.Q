@@ -64,7 +64,6 @@ void trap(struct trapframe *tf)
       //     curProc->ioTime++;
       //   }
       // }
-
       updateProcTime();
 
       //-------------my code
@@ -122,29 +121,26 @@ void trap(struct trapframe *tf)
   // If interrupts were on while locks held, would need to check nlock.
   if (myproc() && myproc()->state == RUNNING && tf->trapno == T_IRQ0 + IRQ_TIMER)
   {
+
+// #if defined RR || defined PBS 
+//     if (myproc() && myproc()->state == RUNNING &&
+//         tf->trapno == T_IRQ0 + IRQ_TIMER)
+//       yield();
+// #endif
+// #ifdef MLFQ
+//   int ageLim[] = {1, 2, 4, 8, 16};
+//     if (myproc()->mlfqTimeCur > ageLim[myproc()->cur_q])
+//     {
+//       // myproc()->demote = 1;
+//       demoteProc(myproc());
+//       yield();
+//     }
+// #endif
+
 #ifndef FCFS
     if (myproc() && myproc()->state == RUNNING &&
         tf->trapno == T_IRQ0 + IRQ_TIMER)
       yield();
-#endif
-#ifdef MLFQ
-    int ageLim[] = {1, 2, 4, 8, 16};
-    if (myproc() && myproc()->mlfqTimeCur > ageLim[myproc()->cur_q])
-    {
-      // myproc()->demote = 1;
-      // myproc()->mlfqTimeCur++;
-      // myproc()->tickQ[myproc()->cur_q]++;
-      demoteProc(myproc());
-      if (myproc() && myproc()->state == RUNNING &&
-          tf->trapno == T_IRQ0 + IRQ_TIMER)
-        yield();
-    }
-    else
-    {
-      // myproc()->mlfqTimeCur++;
-      // myproc()->tickQ[myproc()->cur_q]++;
-    }
-
 #endif
   }
   // Check if the process has been killed since we yielded

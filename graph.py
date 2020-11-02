@@ -39,7 +39,7 @@ for i in output:
     
     for point in output[i]:
         # print(point[0], point[1])
-        plt.plot(xval, yval, c = col)
+        plt.plot(xval, yval, c = col, marker = 8)
 
 plt.xlabel("ticks")
 plt.ylabel("q")
