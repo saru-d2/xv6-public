@@ -20,6 +20,11 @@ for example
 
 time spawns a child process that execs the process and it returns the waittime and runtime of the child process.
 
+implemented using waitx() syscall
+```c
+waitx(&wtime, &rtime)
+```
+
 ## ps
 run
 ```
@@ -51,7 +56,7 @@ As its not pre-emptive we do not yield in trap.c
     }
 ```
 
-### PBS
+## PBS
 Iterate through the proc-table looking for the process with highest priority.
 And execute that process
     
@@ -95,7 +100,7 @@ usage:
     setPriority $NEWPRIORITY $PID
 ```
     
-### MLFQ
+## MLFQ
 5 queues are declared (from 0 - 4)
 We add a process to q0 everytime a process becomes runnable
 Ageing is realized through iterating through every queue thats not q0, and checking if time spent in that queue is greater than the agelimit for that queue (2^i)
@@ -146,16 +151,30 @@ In trap.c, right before yielding, we check if the process has exhausted the time
   int ageLim[] = {1, 2, 4, 8, 16};
     if (myproc()->mlfqTimeCur > ageLim[myproc()->cur_q])
     {
-      // myproc()->demote = 1;
-      demoteProc(myproc());
+      // demoteProc(myproc());
       yield();
     }
 #endif
 ```
+```c
+if (curP->mlfqTimeCur > mlfqTimeLimit[curP->cur_q])
+        {
+          if (curP->cur_q < 4)
+          {
+#ifdef GRAPH
+            cprintf("DEMOTED %d\n", curP->pid);
+#endif
+            next_q = curP->cur_q + 1;
+            curP->mlfqTimeCur = 0;
+          }
+        }
+```
 
-##BONUS
+## BONUS
 so whenever a queue is changes for a process i output a line as follows
 ```c
-          cprintf("\nGRAPH ADD: %d %d %d\n", p->pid, p->cur_q, ticks);
+cprintf("\nGRAPH ADD: %d %d %d\n", p->pid, p->cur_q, ticks);
 ```
-and i redirect the output to a file, from where i run a python script to make the graph. Library used: matlabplot.pyplot
+
+
+and I redirect the output to a file, from where I run a python script to make the graph. Library used: matlabplot.pyplot
